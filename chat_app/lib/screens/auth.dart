@@ -4,6 +4,7 @@ import 'package:chat_app/widgets/user_image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -22,6 +23,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _enteredEmail = '';
   var _enteredPassword = '';
+  var _enteredUsername = '';
   File? _selectedImage;
   var _isAuthenticating = false;
 
@@ -56,7 +58,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
         await storageRef.putFile(_selectedImage!);
         final imageUrl = await storageRef.getDownloadURL();
-        print(imageUrl);
+
+        await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userCredentials.user!.uid)
+        .set({
+          'username' : _enteredUsername,
+          'email' : _enteredEmail,
+          'image_url' : imageUrl,
+        });
       }
     } on FirebaseAuthException catch (error) {
       if (error.code == 'email-already-in-use') {
@@ -125,6 +135,23 @@ class _AuthScreenState extends State<AuthScreen> {
                               _enteredEmail = value!;
                             },
                           ),
+                          if(!_isLogin)
+                            TextFormField(
+                              decoration: 
+                                const InputDecoration(labelText: 'username'),
+                              enableSuggestions: false,
+                              validator: (value){
+                                if(value == null ||
+                                  value.isEmpty ||
+                                  value.trim().length < 4){
+                                    return 'Please enter at least 4 characters.';
+                                }
+                                return null;
+                              },
+                              onSaved: (value){
+                                _enteredUsername = value!;
+                              },
+                            ),
                           TextFormField(
                             decoration:
                                 const InputDecoration(labelText: 'Password'),
